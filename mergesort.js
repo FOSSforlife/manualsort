@@ -1,3 +1,6 @@
+const prompt = require('prompt');
+const colors = require('colors/safe');
+
 // Array.flat() polyfill
 if (!Array.prototype.flat) {
   Array.prototype.flat = function() {
@@ -22,6 +25,10 @@ if (!Array.prototype.flat) {
   };
 }
 
+// global
+const tree = {}; // where all merge-sorting takes place
+let stdOut = true;
+
 // functions
 const newRow = (currentRow) => Array(Math.ceil((currentRow.length) / 2)).fill(0).map(() => []);
 const isUndefined = (arr) => arr.every(a => a === undefined); 
@@ -29,6 +36,17 @@ const isGreater = (item1, item2) => {
   // will be replaced by user input
   return item1 >= item2;
 };
+
+const promptFake = {
+  get: (junk, callback) => {
+    if(tree.leftItem > tree.rightItem) {
+      callback(undefined, {isGreater: 1});
+    }
+    else {
+      callback(undefined, {isGreater: 2});
+    }
+  }
+}
 
 const groupsToMerge = (row) => {
   let leftGroup = [], rightGroup = [];
@@ -50,67 +68,108 @@ const nextGroup = (row) => {
 
 }
 
-const compareOne = () => {
-  let [leftGroup, rightGroup] = groupsToMerge(currentRow);
-  if(!isArray(leftGroup)) {
-    currentRow = nextRow;
-    nextRow = newRow(currentRow);
+
+
+const getComparison = (tree) => {
+  if(stdOut) {
+    console.log(tree.nextRow);
+  }
+  if(tree.nextRow[0].length === tree.items.length) { // done
     return;
   }
-  let newGroupCapacity = leftGroup.length + rightGroup.length;
+
+  [tree.leftGroup, tree.rightGroup] = groupsToMerge(tree.currentRow);
+  if(!Array.isArray(tree.leftGroup)) {
+    tree.currentRow = tree.nextRow;
+    tree.nextRow = newRow(tree.currentRow);
+    getComparison(tree); // TEST: Make sure this works
+    return;
+  }
+  let newGroupCapacity = tree.leftGroup.length + tree.rightGroup.length;
   let newGroup = [];
-  let newGroupInd = -1;
+  tree.newGroupInd = -1;
   do {
-    newGroupInd++;
-    newGroup = nextRow[newGroupInd];
+    tree.newGroupInd++;
+    newGroup = tree.nextRow[tree.newGroupInd];
   } while(newGroup.length >= newGroupCapacity)
 
-  let leftItemInd = leftGroup.findIndex(item => item !== undefined);
-  let rightItemInd = rightGroup.findIndex(item => item !== undefined);
+  tree.leftItemInd = tree.leftGroup.findIndex(item => item !== undefined);
+  tree.rightItemInd = tree.rightGroup.findIndex(item => item !== undefined);
 
-  if(leftItemInd == -1) { // if left array is empty add right item
-    nextRow[newGroupInd].push(rightGroup[rightItemInd]);
-    rightGroup[rightItemInd] = undefined;
+  if(tree.leftItemInd == -1) { // if left array is empty add right item
+    tree.nextRow[tree.newGroupInd].push(tree.rightGroup[tree.rightItemInd]);
+    tree.rightGroup[tree.rightItemInd] = undefined;
+    getComparison(tree);
     return;
   }
-  let leftItem = leftGroup[leftItemInd];
+  tree.leftItem = tree.leftGroup[tree.leftItemInd];
 
-  if(rightItemInd == -1) { // if right array is empty add left item
-    nextRow[newGroupInd].push(leftItem);
-    leftGroup[leftItemInd] = undefined;
+  if(tree.rightItemInd == -1) { // if right array is empty add left item
+    tree.nextRow[tree.newGroupInd].push(tree.leftItem);
+    tree.leftGroup[tree.leftItemInd] = undefined;
+    getComparison(tree);
     return;
   }
-  let rightItem = rightGroup[rightItemInd] || undefined;
+  tree.rightItem = tree.rightGroup[tree.rightItemInd] || undefined;
 
-  if(!isGreater(leftItem, rightItem)) {
-    nextRow[newGroupInd].push(leftItem);
-    leftGroup[leftItemInd] = undefined;
-  }
-  else {
-    nextRow[newGroupInd].push(rightItem);
-    rightGroup[rightItemInd] = undefined;
+  
 
-  }
+  // newGroupInd, leftGroup, leftItemInd, rightGroup, rightItemInd
 };
 
-const main = () => {
-  const items = Array(13).fill(0).map(() => Math.floor(Math.random()*50)); // initialize random array
-  const numOfItems = items.length;
+const compare = (tree, compareFunc) => {
+  getComparison(tree);
+
+  compareFunc({
+    properties: {
+      isGreater: {
+        description: colors.green(`${tree.leftItem} (1) or ${tree.rightItem} (2)?`),
+        type: 'number',
+        required: true
+      }
+    }
+  }, (err, result) => {
+    if(result.isGreater == 1) {
+      tree.nextRow[tree.newGroupInd].push(tree.rightItem);
+      tree.rightGroup[tree.rightItemInd] = undefined;
+    }
+    else {
+      tree.nextRow[tree.newGroupInd].push(tree.leftItem);
+      tree.leftGroup[tree.leftItemInd] = undefined;
+    }
+    
+
+    // recursive for now but doesn't have to be. this can be called at any time
+    if(tree.nextRow[0].length < tree.items.length) {
+      compare(tree, compareFunc);
+    }
+  });
+
+}
+
+const main = (compareFunc = prompt.get, enableStdOut = false) => {
+  stdOut = enableStdOut;
+  tree.items = Array(13).fill(0).map(() => Math.floor(Math.random()*50)); // initialize random array
+  const numOfItems = tree.items.length;
   
-  let currentRow = items.map(item => [item]);
-  let nextRow = Array(Math.ceil((currentRow.length) / 2)).fill(0).map(() => []);
-  console.log(currentRow);
-  console.log(nextRow);
-  
-  while(nextRow[0].length < numOfItems) {
-    compareOne();
-    console.log(nextRow);
+  tree.currentRow = tree.items.map(item => [item]);
+  tree.nextRow = Array(Math.ceil((tree.currentRow.length) / 2)).fill(0).map(() => []);
+  if(stdOut) {
+    console.log(tree.nextRow);
+    console.log(tree.currentRow);
   }
+  
+  compare(tree, compareFunc);
+  console.log(tree.nextRow[0]);
+  console.log(tree.nextRow[0].slice(0).sort((i, j) => i - j));
+  return tree.nextRow;
 }
 
 // main();
 
 
 module.exports = { 
-  groupsToMerge
+  groupsToMerge,
+  main,
+  promptFake
 };
