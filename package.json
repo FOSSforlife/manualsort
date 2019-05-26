@@ -1,0 +1,23 @@
+{
+  "name": "manualsort",
+  "version": "1.0.0",
+  "description": "Create a sorted list of items by manually comparing them ",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FOSSforlife/manualsort.git"
+  },
+  "author": "Elias Jackson",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/FOSSforlife/manualsort/issues"
+  },
+  "homepage": "https://github.com/FOSSforlife/manualsort#readme",
+  "dependencies": {},
+  "devDependencies": {
+    "jest": "^24.8.0"
+  }
+}
