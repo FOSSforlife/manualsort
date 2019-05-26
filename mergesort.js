@@ -30,20 +30,32 @@ const isGreater = (item1, item2) => {
   return item1 >= item2;
 };
 
-const nextMove = () => {
+const groupsToMerge = (row) => {
   let leftGroup = [], rightGroup = [];
   let i = 0;
   while(isUndefined(leftGroup) && isUndefined(rightGroup)) {
-    if(currentRow[i]) {
-      leftGroup = currentRow[i];
-      rightGroup = currentRow[i + 1] || [];
-      i += 2;
+    if(row[i]) {
+      leftGroup = row[i];
+      rightGroup = row[i + 1] || [];
     }
-    else { // if currentRow.flat().length == 0
-      currentRow = nextRow;
-      nextRow = newRow(currentRow);
-      return;
+    else { // if row is empty
+      return [-1, -1];
     }
+    i += 2;
+  }
+  return [leftGroup, rightGroup];
+}
+
+const nextGroup = (row) => {
+
+}
+
+const compareOne = () => {
+  let [leftGroup, rightGroup] = groupsToMerge(currentRow);
+  if(!isArray(leftGroup)) {
+    currentRow = nextRow;
+    nextRow = newRow(currentRow);
+    return;
   }
   let newGroupCapacity = leftGroup.length + rightGroup.length;
   let newGroup = [];
@@ -81,15 +93,24 @@ const nextMove = () => {
   }
 };
 
-const items = Array(13).fill(0).map(() => Math.floor(Math.random()*50)); // initialize random array
-const numOfItems = items.length;
-
-let currentRow = items.map(item => [item]);
-let nextRow = Array(Math.ceil((currentRow.length) / 2)).fill(0).map(() => []);
-console.log(currentRow);
-console.log(nextRow);
-
-while(nextRow[0].length < numOfItems) {
-  nextMove();
+const main = () => {
+  const items = Array(13).fill(0).map(() => Math.floor(Math.random()*50)); // initialize random array
+  const numOfItems = items.length;
+  
+  let currentRow = items.map(item => [item]);
+  let nextRow = Array(Math.ceil((currentRow.length) / 2)).fill(0).map(() => []);
+  console.log(currentRow);
   console.log(nextRow);
+  
+  while(nextRow[0].length < numOfItems) {
+    compareOne();
+    console.log(nextRow);
+  }
 }
+
+// main();
+
+
+module.exports = { 
+  groupsToMerge
+};
