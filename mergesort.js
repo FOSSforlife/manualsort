@@ -39,7 +39,7 @@ const isGreater = (item1, item2) => {
 
 const promptFake = {
   get: (junk, callback) => {
-    if(tree.leftItem > tree.rightItem) {
+    if(tree.leftItem - tree.rightItem > 0) {
       callback(undefined, {isGreater: 1});
     }
     else {
@@ -64,26 +64,20 @@ const groupsToMerge = (row) => {
   return [leftGroup, rightGroup];
 }
 
-const nextGroup = (row) => {
-
-}
-
-
 
 const getComparison = (tree) => {
   if(stdOut) {
     console.log(tree.nextRow);
   }
   if(tree.nextRow[0].length === tree.items.length) { // done
-    return;
+    return false;
   }
 
   [tree.leftGroup, tree.rightGroup] = groupsToMerge(tree.currentRow);
   if(!Array.isArray(tree.leftGroup)) {
     tree.currentRow = tree.nextRow;
     tree.nextRow = newRow(tree.currentRow);
-    getComparison(tree); // TEST: Make sure this works
-    return;
+    return getComparison(tree); // TEST: Make sure this works
   }
   let newGroupCapacity = tree.leftGroup.length + tree.rightGroup.length;
   let newGroup = [];
@@ -100,7 +94,7 @@ const getComparison = (tree) => {
     tree.nextRow[tree.newGroupInd].push(tree.rightGroup[tree.rightItemInd]);
     tree.rightGroup[tree.rightItemInd] = undefined;
     getComparison(tree);
-    return;
+    return getComparison(tree);
   }
   tree.leftItem = tree.leftGroup[tree.leftItemInd];
 
@@ -108,43 +102,43 @@ const getComparison = (tree) => {
     tree.nextRow[tree.newGroupInd].push(tree.leftItem);
     tree.leftGroup[tree.leftItemInd] = undefined;
     getComparison(tree);
-    return;
+    return getComparison(tree);
   }
   tree.rightItem = tree.rightGroup[tree.rightItemInd] || undefined;
 
-  
+  return true;  
 
   // newGroupInd, leftGroup, leftItemInd, rightGroup, rightItemInd
 };
 
 const compare = (tree, compareFunc) => {
-  getComparison(tree);
-
-  compareFunc({
-    properties: {
-      isGreater: {
-        description: colors.green(`${tree.leftItem} (1) or ${tree.rightItem} (2)?`),
-        type: 'number',
-        required: true
+  if (getComparison(tree)) {
+      compareFunc({
+        properties: {
+          isGreater: {
+            description: colors.green(`${tree.leftItem} (1) or ${tree.rightItem} (2)?`),
+          type: 'number',
+          required: true
+        }
       }
-    }
-  }, (err, result) => {
-    if(result.isGreater == 1) {
-      tree.nextRow[tree.newGroupInd].push(tree.rightItem);
-      tree.rightGroup[tree.rightItemInd] = undefined;
-    }
-    else {
-      tree.nextRow[tree.newGroupInd].push(tree.leftItem);
-      tree.leftGroup[tree.leftItemInd] = undefined;
-    }
-    
-
-    // recursive for now but doesn't have to be. this can be called at any time
-    if(tree.nextRow[0].length < tree.items.length) {
-      compare(tree, compareFunc);
-    }
-  });
-
+    }, (err, result) => {
+      if(result.isGreater == 1) {
+        tree.nextRow[tree.newGroupInd].push(tree.rightItem);
+        tree.rightGroup[tree.rightItemInd] = undefined;
+      }
+      else {
+        tree.nextRow[tree.newGroupInd].push(tree.leftItem);
+        tree.leftGroup[tree.leftItemInd] = undefined;
+      }
+      
+      
+      // recursive for now but doesn't have to be. this can be called at any time
+      if(tree.nextRow[0].length < tree.items.length) {
+        compare(tree, compareFunc);
+      }
+    });
+}
+  
 }
 
 const main = (compareFunc = prompt.get, enableStdOut = false) => {
