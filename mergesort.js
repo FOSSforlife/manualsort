@@ -1,32 +1,10 @@
 const prompt = require('prompt');
 const colors = require('colors/safe');
+const util = require('./util');
 
-// Array.flat() polyfill
-if (!Array.prototype.flat) {
-  Array.prototype.flat = function() {
-    var depth = arguments[0];
-    depth = depth === undefined ? 1 : Math.floor(depth);
-    if (depth < 1) return Array.prototype.slice.call(this);
-    return (function flat(arr, depth) {
-      var len = arr.length >>> 0;
-      var flattened = [];
-      var i = 0;
-      while (i < len) {
-        if (i in arr) {
-          var el = arr[i];
-          if (Array.isArray(el) && depth > 0)
-            flattened = flattened.concat(flat(el, depth - 1));
-          else flattened.push(el);
-        }
-        i++;
-      }
-      return flattened;
-    })(this, depth);
-  };
-}
 
 // global
-const tree = {}; // where all merge-sorting takes place
+const tree = {numOfOperations: 0}; // where all merge-sorting takes place
 let stdOut = true;
 
 // functions
@@ -113,6 +91,7 @@ const getComparison = (tree) => {
 
 const compare = (tree, compareFunc) => {
   if (getComparison(tree)) {
+      tree.numOfOperations++;
       compareFunc({
         properties: {
           isGreater: {
@@ -141,9 +120,11 @@ const compare = (tree, compareFunc) => {
   
 }
 
-const main = (compareFunc = prompt.get, enableStdOut = false) => {
-  stdOut = enableStdOut;
-  tree.items = Array(13).fill(0).map(() => Math.floor(Math.random()*50)); // initialize random array
+const main = (options) => {
+  const compareFunc = options.compareFunc || prompt.get;
+  stdOut = options.enableStdOut || false;
+  const itemsToMake = options.randomItemsNum || 13;
+  tree.items = options.items || Array(itemsToMake).fill(0).map(() => Math.floor(Math.random()*50)); // initialize random array
   const numOfItems = tree.items.length;
   
   tree.currentRow = tree.items.map(item => [item]);
@@ -156,6 +137,7 @@ const main = (compareFunc = prompt.get, enableStdOut = false) => {
   compare(tree, compareFunc);
   console.log(tree.nextRow[0]);
   console.log(tree.nextRow[0].slice(0).sort((i, j) => i - j));
+  console.log(`${tree.numOfOperations} operations for ${tree.items.length} items`);
   return tree.nextRow;
 }
 
